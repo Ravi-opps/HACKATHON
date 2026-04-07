@@ -18,8 +18,8 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   if (allowedRoles && !allowedRoles.includes(userRole)) {
     // Redirect to their specific landing page if role not allowed
     const roleRedirects: Record<string, string> = {
-      volunteer: '/map',
-      field: '/reports',
+      volunteer: '/volunteer',
+      field: '/fieldworker',
       coordinator: '/map',
       admin: '/admin'
     };
