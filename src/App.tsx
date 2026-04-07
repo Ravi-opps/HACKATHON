@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AnimatePresence } from 'motion/react';
 import Layout from './components/Layout';
 import Login from './views/Login';
-import VolunteerDashboard from './views/VolunteerDashboard';
 import FieldReport from './views/FieldReport';
 import AdminDashboard from './views/AdminDashboard';
 import ResponseOverview from './views/ResponseOverview';
@@ -31,14 +30,6 @@ export default function App() {
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        
-        <Route path="/dashboard" element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <Layout>
-              <VolunteerDashboard />
-            </Layout>
-          </ProtectedRoute>
-        } />
         
         <Route path="/fieldworker" element={
           <ProtectedRoute allowedRoles={['field']}>
