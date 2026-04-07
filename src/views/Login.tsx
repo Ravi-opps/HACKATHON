@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { User, Shield, Briefcase, Heart, Eye, EyeOff, ArrowRight, Globe, Leaf, HelpCircle } from 'lucide-react';
+import AuthSpinner from '../components/AuthSpinner';
 
 const roles = [
   { id: 'volunteer', label: 'Volunteer', icon: Heart },
@@ -13,20 +14,31 @@ const roles = [
 export default function Login() {
   const [selectedRole, setSelectedRole] = useState('coordinator');
   const [showPassword, setShowPassword] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('userRole', selectedRole);
-    if (selectedRole === 'admin') navigate('/admin');
-    else if (selectedRole === 'volunteer') navigate('/map');
-    else if (selectedRole === 'field') navigate('/reports');
-    else if (selectedRole === 'coordinator') navigate('/map');
-    else navigate('/dashboard');
+    setIsAuthenticating(true);
+    
+    // Simulate authentication delay
+    setTimeout(() => {
+      localStorage.setItem('userRole', selectedRole);
+      if (selectedRole === 'admin') navigate('/admin');
+      else if (selectedRole === 'volunteer') navigate('/volunteer');
+      else if (selectedRole === 'field') navigate('/fieldworker');
+      else if (selectedRole === 'coordinator') navigate('/map');
+      else navigate('/dashboard');
+    }, 1500); // 1.5 second delay for spinner visibility
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
+    <>
+      <AnimatePresence>
+        {isAuthenticating && <AuthSpinner />}
+      </AnimatePresence>
+      
+      <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left Side: Narrative/Brand Imagery */}
       <section className="hidden md:flex md:w-2/5 relative overflow-hidden bg-primary items-end p-12">
         <div className="absolute inset-0 z-0">
@@ -172,5 +184,6 @@ export default function Login() {
         </div>
       </section>
     </div>
+    </>
   );
 }

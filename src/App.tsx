@@ -40,7 +40,7 @@ export default function App() {
           </ProtectedRoute>
         } />
         
-        <Route path="/reports" element={
+        <Route path="/fieldworker" element={
           <ProtectedRoute allowedRoles={['field']}>
             <Layout>
               <FieldReport />
@@ -56,8 +56,16 @@ export default function App() {
           </ProtectedRoute>
         } />
         
+        <Route path="/volunteer" element={
+          <ProtectedRoute allowedRoles={['volunteer']}>
+            <Layout>
+              <ResponseOverview />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        
         <Route path="/map" element={
-          <ProtectedRoute allowedRoles={['volunteer', 'coordinator']}>
+          <ProtectedRoute allowedRoles={['coordinator']}>
             <Layout>
               <ResponseOverview />
             </Layout>
