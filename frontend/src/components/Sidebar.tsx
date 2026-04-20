@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Map, FileText, Settings, Bell, HelpCircle, LogOut, Leaf } from 'lucide-react';
 import { motion } from 'motion/react';
+import { getAuthRole, logout } from '../lib/auth';
 
 const navItems = [
   { icon: Map, label: 'Live Map', path: '/map', roles: ['volunteer', 'coordinator'] },
@@ -12,12 +13,12 @@ const navItems = [
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const userRole = localStorage.getItem('userRole') || '';
+  const userRole = getAuthRole() || '';
 
   if (location.pathname === '/' || location.pathname === '/login') return null;
 
-  const handleLogout = () => {
-    localStorage.removeItem('userRole');
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 

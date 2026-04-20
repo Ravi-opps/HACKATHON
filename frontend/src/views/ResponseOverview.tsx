@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { Search, Plus, Minus, Navigation, Layers2, Radio, CheckCircle, AlertTriangle, Clock, Heart, Truck, Package } from 'lucide-react';
+import { getAuthRole } from '../lib/auth';
 
 const stats = [
   { label: 'Open Needs', value: '12', trend: '+2 since 1h', icon: AlertTriangle, color: 'text-secondary' },
@@ -9,6 +10,8 @@ const stats = [
 ];
 
 export default function ResponseOverview() {
+  const userRole = getAuthRole();
+
   return (
     <div className="space-y-8">
       <div>
@@ -82,13 +85,13 @@ export default function ResponseOverview() {
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-headline font-bold text-primary flex items-center gap-2">
                 <Radio className="text-secondary w-5 h-5" />
-                {localStorage.getItem('userRole') === 'volunteer' ? 'Nearby Requests' : 'Live Updates'}
+                {userRole === 'volunteer' ? 'Nearby Requests' : 'Live Updates'}
               </h3>
               <span className="px-2 py-1 rounded bg-secondary/10 text-[10px] font-bold text-secondary">REAL-TIME</span>
             </div>
             
             <div className="space-y-6">
-              {localStorage.getItem('userRole') === 'volunteer' ? (
+              {userRole === 'volunteer' ? (
                 // Volunteer Specific View: Accept/Decline
                 [
                   { id: 1, title: 'Medical Kit Delivery', zone: 'Kukatpally', time: '2m ago', priority: 'Critical' },

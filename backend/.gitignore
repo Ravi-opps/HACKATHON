@@ -1,0 +1,44 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Packaging / build artifacts
+*.egg-info/
+build/
+dist/
+pip-wheel-metadata/
+
+# Virtual environments
+dev/
+.venv/
+venv/
+env/
+
+# Tooling caches and test artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+
+# Environment and secrets
+.env
+.env.*
+*firebase-adminsdk*.json
+*.pem
+*.key
+
+# Local/editor/runtime files
+.vscode/
+.idea/
+*.log
+*.sqlite3
+
+# Local media / artifacts
+one.m4a

@@ -1,49 +1,87 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { User, Briefcase, Heart, Eye, EyeOff, ArrowRight, Leaf, MapPin, Phone, Mail, ShieldCheck } from 'lucide-react';
+import { User, Briefcase, Heart, Eye, EyeOff, ArrowRight, Leaf, MapPin, Phone, Mail, ShieldCheck, Chrome } from 'lucide-react';
+import { signup } from '../lib/auth';
+import { SignupFormErrors, validateSignupForm } from '../lib/authValidation';
 
 const roles = [
   { id: 'volunteer', label: 'Volunteer', icon: Heart, description: 'General support and community aid' },
   { id: 'field', label: 'Field Worker', icon: Briefcase, description: 'Specialized response and logistics' },
+] as const;
+
+const zones = [
+  { value: 'north', label: 'North' },
+  { value: 'south', label: 'South' },
+  { value: 'east', label: 'East' },
+  { value: 'west', label: 'West' },
+  { value: 'central', label: 'Central' },
 ];
 
-const zones = ['Kukatpally', 'Miyapur', 'Jubilee Hills', 'Secunderabad', 'Gachibowli', 'Hitech City'];
-
 const professions = [
-  'Medical',
-  'Food & Nutrition',
-  'Transportation',
-  'Shelter & Housing',
-  'Mental Health Support',
-  'Legal Assistance',
-  'Education & Tutoring',
-  'Childcare',
-  'Translation Services',
-  'Other'
+  { value: 'student', label: 'Student' },
+  { value: 'engineer', label: 'Engineer' },
+  { value: 'teacher', label: 'Teacher' },
+  { value: 'doctor', label: 'Doctor' },
+  { value: 'other', label: 'Other' },
 ];
 
 export default function Signup() {
-  const [selectedRole, setSelectedRole] = useState('volunteer');
+  const [selectedRole, setSelectedRole] = useState<'volunteer' | 'field'>('volunteer');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<SignupFormErrors>({});
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
-    zone: 'Kukatpally',
-    profession: 'Medical',
+    zone: 'north',
+    profession: 'student',
     password: '',
     confirmPassword: ''
   });
   
   const navigate = useNavigate();
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, we would validate and send to API
-    localStorage.setItem('userRole', selectedRole);
-    if (selectedRole === 'volunteer') navigate('/map');
-    else navigate('/reports');
+    setError('');
+    const validationErrors = validateSignupForm(
+      {
+        ...formData,
+        role: selectedRole,
+      },
+      zones.map((zone) => zone.value),
+      professions.map((profession) => profession.value)
+    );
+    setFieldErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await signup({
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim(),
+        zone: formData.zone,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        role: selectedRole,
+        profession: selectedRole === 'volunteer' ? formData.profession : undefined,
+      });
+      navigate(response.user.route || '/login', { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Signup failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    setError('');
+    setError('Google sign-up is disabled. Create your account with the form.');
   };
 
   return (
@@ -116,7 +154,10 @@ export default function Signup() {
                   <button
                     key={role.id}
                     type="button"
-                    onClick={() => setSelectedRole(role.id)}
+                    onClick={() => {
+                      setSelectedRole(role.id);
+                      setFieldErrors((prev) => ({ ...prev, profession: undefined }));
+                    }}
                     className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${
                       selectedRole === role.id
                         ? 'border-primary bg-surface-lowest shadow-md'
@@ -149,9 +190,16 @@ export default function Signup() {
                   type="text"
                   required
                   placeholder="e.g. Ravi Kumar"
+                  value={formData.fullName}
                   className="w-full bg-surface-container border-b-2 border-outline-variant focus:border-primary focus:ring-0 transition-all px-4 py-3 rounded-t-lg text-sm"
-                  onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, fullName: e.target.value});
+                    setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
+                  }}
                 />
+                {fieldErrors.fullName && (
+                  <p className="text-xs font-medium text-red-600">{fieldErrors.fullName}</p>
+                )}
               </div>
 
               {/* Email */}
@@ -163,9 +211,16 @@ export default function Signup() {
                   type="email"
                   required
                   placeholder="ravi.k@groundpulse.org"
+                  value={formData.email}
                   className="w-full bg-surface-container border-b-2 border-outline-variant focus:border-primary focus:ring-0 transition-all px-4 py-3 rounded-t-lg text-sm"
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, email: e.target.value});
+                    setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                  }}
                 />
+                {fieldErrors.email && (
+                  <p className="text-xs font-medium text-red-600">{fieldErrors.email}</p>
+                )}
               </div>
 
               {/* Phone */}
@@ -176,10 +231,17 @@ export default function Signup() {
                 <input
                   type="tel"
                   required
-                  placeholder="+91 98765 43210"
+                  placeholder="+919876543210"
+                  value={formData.phone}
                   className="w-full bg-surface-container border-b-2 border-outline-variant focus:border-primary focus:ring-0 transition-all px-4 py-3 rounded-t-lg text-sm"
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, phone: e.target.value});
+                    setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                  }}
                 />
+                {fieldErrors.phone && (
+                  <p className="text-xs font-medium text-red-600">{fieldErrors.phone}</p>
+                )}
               </div>
 
               {/* Zone */}
@@ -188,13 +250,20 @@ export default function Signup() {
                   <MapPin className="w-3 h-3" /> Operational Zone
                 </label>
                 <select
+                  value={formData.zone}
                   className="w-full bg-surface-container border-b-2 border-outline-variant focus:border-primary focus:ring-0 transition-all px-4 py-3 rounded-t-lg text-sm appearance-none"
-                  onChange={(e) => setFormData({...formData, zone: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, zone: e.target.value});
+                    setFieldErrors((prev) => ({ ...prev, zone: undefined }));
+                  }}
                 >
                   {zones.map(zone => (
-                    <option key={zone} value={zone}>{zone}</option>
+                    <option key={zone.value} value={zone.value}>{zone.label}</option>
                   ))}
                 </select>
+                {fieldErrors.zone && (
+                  <p className="text-xs font-medium text-red-600">{fieldErrors.zone}</p>
+                )}
               </div>
 
               {/* Profession (Conditional for Volunteers) */}
@@ -204,13 +273,20 @@ export default function Signup() {
                     <Briefcase className="w-3 h-3" /> Area of Expertise
                   </label>
                   <select
+                    value={formData.profession}
                     className="w-full bg-surface-container border-b-2 border-outline-variant focus:border-primary focus:ring-0 transition-all px-4 py-3 rounded-t-lg text-sm appearance-none"
-                    onChange={(e) => setFormData({...formData, profession: e.target.value})}
+                    onChange={(e) => {
+                      setFormData({...formData, profession: e.target.value});
+                      setFieldErrors((prev) => ({ ...prev, profession: undefined }));
+                    }}
                   >
                     {professions.map(prof => (
-                      <option key={prof} value={prof}>{prof}</option>
+                      <option key={prof.value} value={prof.value}>{prof.label}</option>
                     ))}
                   </select>
+                  {fieldErrors.profession && (
+                    <p className="text-xs font-medium text-red-600">{fieldErrors.profession}</p>
+                  )}
                 </div>
               )}
 
@@ -221,8 +297,12 @@ export default function Signup() {
                   type={showPassword ? 'text' : 'password'}
                   required
                   placeholder="••••••••"
+                  value={formData.password}
                   className="w-full bg-surface-container border-b-2 border-outline-variant focus:border-primary focus:ring-0 transition-all px-4 py-3 rounded-t-lg text-sm"
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, password: e.target.value});
+                    setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                  }}
                 />
                 <button
                   type="button"
@@ -231,6 +311,9 @@ export default function Signup() {
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
+                {fieldErrors.password && (
+                  <p className="text-xs font-medium text-red-600">{fieldErrors.password}</p>
+                )}
               </div>
 
               {/* Confirm Password */}
@@ -240,21 +323,51 @@ export default function Signup() {
                   type="password"
                   required
                   placeholder="••••••••"
+                  value={formData.confirmPassword}
                   className="w-full bg-surface-container border-b-2 border-outline-variant focus:border-primary focus:ring-0 transition-all px-4 py-3 rounded-t-lg text-sm"
-                  onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, confirmPassword: e.target.value});
+                    setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                  }}
                 />
+                {fieldErrors.confirmPassword && (
+                  <p className="text-xs font-medium text-red-600">{fieldErrors.confirmPassword}</p>
+                )}
               </div>
             </div>
 
             <div className="pt-4">
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="w-full py-4 rounded-xl font-headline font-bold text-white tracking-wide bg-gradient-to-r from-primary to-primary-container shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
               >
                 <span>Initialize Responder Profile</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-              
+              {error && (
+                <p className="mt-3 text-sm font-medium text-red-600">{error}</p>
+              )}
+
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-outline-variant/30"></div>
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-surface-low px-3 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">or</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleSignup}
+                disabled={isSubmitting}
+                className="w-full py-3 rounded-xl font-headline font-bold text-on-surface tracking-wide bg-surface-lowest border border-outline-variant hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-2"
+              >
+                <Chrome className="w-4 h-4" />
+                <span>Continue with Google</span>
+              </button>
+               
               <p className="text-center mt-6 text-sm text-on-surface-variant">
                 Already part of the network?{' '}
                 <Link to="/login" className="text-primary font-bold hover:underline">

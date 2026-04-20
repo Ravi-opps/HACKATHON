@@ -1,13 +1,23 @@
-import { useLocation } from 'react-router-dom';
-import { Search, Bell, HelpCircle, Settings } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Search, Bell, HelpCircle, Settings, LogOut } from 'lucide-react';
+import profileImage from '../assets/OIP.jpg';
+import { getAuthSession, logout } from '../lib/auth';
 
 export default function Topbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const session = getAuthSession();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   if (location.pathname === '/' || location.pathname === '/login') return null;
 
   return (
-    <header className="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 px-8 z-40 bg-surface/80 backdrop-blur-xl flex justify-between items-center">
+    <header className="fixed top-0 left-0 right-0 h-16 px-8 z-40 bg-surface/80 backdrop-blur-xl flex justify-between items-center">
       <div className="flex items-center gap-4 w-1/2">
         <div className="relative w-full max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
@@ -33,15 +43,21 @@ export default function Topbar() {
         
         <div className="flex items-center gap-3 pl-4 border-l border-outline-variant/30">
           <div className="text-right">
-            <p className="text-sm font-bold text-primary leading-tight">Ravi Kumar</p>
-            <p className="text-[10px] text-on-surface-variant font-medium uppercase tracking-wider">Volunteer Specialist</p>
+            <p className="text-sm font-bold text-primary leading-tight">{session?.user.fullName || 'Responder'}</p>
+            <p className="text-[10px] text-on-surface-variant font-medium uppercase tracking-wider">{session?.user.role || 'User'}</p>
           </div>
           <img
-            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100&h=100"
+            src={profileImage}
             alt="Profile"
             className="w-10 h-10 rounded-full object-cover shadow-sm ring-2 ring-primary/10"
-            referrerPolicy="no-referrer"
           />
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-wide text-on-surface-variant hover:text-red-600 hover:bg-red-50 transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
+          </button>
         </div>
       </div>
     </header>

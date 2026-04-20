@@ -1,35 +1,64 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Shield, Briefcase, Heart, Eye, EyeOff, ArrowRight, Globe, Leaf, HelpCircle } from 'lucide-react';
+import { User, Shield, Briefcase, Heart, Eye, EyeOff, ArrowRight, Globe, Leaf, HelpCircle, Chrome } from 'lucide-react';
 import AuthSpinner from '../components/AuthSpinner';
+import { getAuthSession, login, Role } from '../lib/auth';
+import { validateLoginForm } from '../lib/authValidation';
 
 const roles = [
   { id: 'volunteer', label: 'Volunteer', icon: Heart },
   { id: 'field', label: 'Field Worker', icon: Briefcase },
   { id: 'coordinator', label: 'Coordinator', icon: User },
   { id: 'admin', label: 'Admin', icon: Shield },
-];
+] as const;
 
 export default function Login() {
-  const [selectedRole, setSelectedRole] = useState('coordinator');
+  const [selectedRole, setSelectedRole] = useState<Role>('coordinator');
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberSession, setRememberSession] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ identifier?: string; password?: string }>({});
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    const session = getAuthSession();
+    if (session?.user.route) {
+      navigate(session.user.route, { replace: true });
+    }
+  }, [navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    const validationErrors = validateLoginForm({ identifier, password });
+    setFieldErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
     setIsAuthenticating(true);
-    
-    // Simulate authentication delay
-    setTimeout(() => {
-      localStorage.setItem('userRole', selectedRole);
-      if (selectedRole === 'admin') navigate('/admin');
-      else if (selectedRole === 'volunteer') navigate('/volunteer');
-      else if (selectedRole === 'field') navigate('/fieldworker');
-      else if (selectedRole === 'coordinator') navigate('/map');
-      else navigate('/dashboard');
-    }, 1500); // 1.5 second delay for spinner visibility
+
+    try {
+      const response = await login({
+        identifier: identifier.trim(),
+        password,
+        role: selectedRole,
+        rememberSession,
+      });
+      navigate(response.user.route || '/login', { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setError('Google sign-in is disabled. Use email/username + password login.');
   };
 
   return (
@@ -96,7 +125,10 @@ export default function Login() {
             {roles.map((role) => (
               <button
                 key={role.id}
-                onClick={() => setSelectedRole(role.id)}
+                onClick={() => {
+                  setSelectedRole(role.id);
+                  setError('');
+                }}
                 className={`group flex flex-col items-center p-5 rounded-xl border-2 transition-all active:scale-95 ${
                   selectedRole === role.id
                     ? 'border-primary bg-surface-lowest shadow-md'
@@ -125,14 +157,29 @@ export default function Login() {
               <input
                 type="text"
                 placeholder="e.g. j.doe@groundpulse.org"
+                value={identifier}
+                onChange={(e) => {
+                  setIdentifier(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, identifier: undefined }));
+                }}
+                required
                 className="w-full bg-surface-container border-b-2 border-outline-variant focus:border-primary focus:ring-0 transition-all px-4 py-3 rounded-t-lg text-sm"
               />
+              {fieldErrors.identifier && (
+                <p className="text-xs font-medium text-red-600">{fieldErrors.identifier}</p>
+              )}
             </div>
             <div className="space-y-1 relative">
               <label className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant ml-1">Password</label>
               <input
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                }}
+                required
                 className="w-full bg-surface-container border-b-2 border-outline-variant focus:border-primary focus:ring-0 transition-all px-4 py-3 rounded-t-lg text-sm"
               />
               <button
@@ -142,11 +189,19 @@ export default function Login() {
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
+              {fieldErrors.password && (
+                <p className="text-xs font-medium text-red-600">{fieldErrors.password}</p>
+              )}
             </div>
 
             <div className="flex items-center justify-between py-2">
               <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" className="h-5 w-5 rounded border-outline-variant text-primary focus:ring-primary-container" />
+                <input
+                  type="checkbox"
+                  checked={rememberSession}
+                  onChange={(e) => setRememberSession(e.target.checked)}
+                  className="h-5 w-5 rounded border-outline-variant text-primary focus:ring-primary-container"
+                />
                 <span className="text-xs font-medium text-on-surface-variant group-hover:text-on-surface">Remember this session</span>
               </label>
               <a href="#" className="text-xs font-bold text-primary hover:text-secondary transition-colors">Forgot credentials?</a>
@@ -154,10 +209,33 @@ export default function Login() {
 
             <button
               type="submit"
+              disabled={isAuthenticating}
               className="w-full py-4 rounded-xl font-headline font-bold text-white tracking-wide bg-gradient-to-r from-primary to-primary-container shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
             >
               <span>Access Secure Portal</span>
               <ArrowRight className="w-4 h-4" />
+            </button>
+            {error && (
+              <p className="text-sm font-medium text-red-600">{error}</p>
+            )}
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-outline-variant/30"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-surface-low px-3 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">or</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={isAuthenticating}
+              className="w-full py-3 rounded-xl font-headline font-bold text-on-surface tracking-wide bg-surface-lowest border border-outline-variant hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-2"
+            >
+              <Chrome className="w-4 h-4" />
+              <span>Continue with Google</span>
             </button>
 
             <p className="text-center text-sm text-on-surface-variant mt-6">
